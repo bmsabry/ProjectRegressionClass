@@ -1,0 +1,221 @@
+---
+title: "RegressionClassProject"
+author: "Bassam Abdelnabi"
+date: "9/9/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Synopsis
+Motor Trend is a magazine that focuses on the automobile industry. Looking at a data set of a collection of cars, they are interested in exploring the relationship between a set of variables and miles per gallon (MPG) (outcome). They are particularly interested in the following two questions:
+
+“Is an automatic or manual transmission better for MPG”
+"Quantify the MPG difference between automatic and manual transmissions"
+
+This study shows that the autmoatic trasnmissions is better with an average saving of 1.4-2. It may be as high as 2.9 mpg. The models showing this conclusion have an adjusted RMS of 0.45-0.83. All the models agree that there is a benefit and saving. However, they disagree in the specific value. The author of this report recommends taking more data for validation. Please check the rmd code in the github repo to check the code.
+
+# Loading necessary libraries and data
+
+```{r, cache=TRUE, echo=FALSE, warning=FALSE, eval=TRUE}
+# Libraries Needed
+library(caret)
+library(glmnet)
+library(mlbench)
+library(psych)
+library(mlbench)
+library(GGally)
+library(dplyr)
+# Data
+data("mtcars")
+datamtcars <- mtcars
+```
+
+# Exploring and cleaning the data
+Data structure is showing a lot of numerical while they should be listed as factors so we will correct
+that. We will check the data for NA, zero covariates or near zero. We will check collinearity. Let us check how this is done
+
+```{r, cache=TRUE, echo=FALSE, eval=TRUE, warning=FALSE}
+str(datamtcars)
+
+# variables to be changed to factors
+cols <- c("cyl", "vs", "am", "gear","carb")
+datamtcars[cols] <- lapply(datamtcars[cols], factor)  ## changed to factor
+
+# checking our work
+str(datamtcars)
+
+# searching the data for NA
+NAdata <- sum(is.na(datamtcars))
+#NA percentage in training set
+percentNAdata <- NAdata / (dim(datamtcars)[1] * dim(datamtcars)[2])
+
+percentNAdata
+# no NA data in the data set
+
+# Finding near zero and zerp covariates
+nsv<-nearZeroVar(datamtcars,saveMetrics = TRUE)
+# Which variables are near zero variance. Confirm if physics dictate that they are not important
+nsv[nsv[,"nzv"] > 0, ]
+# Which variables are zero. Confirm if physics dictate that they are not important
+nsv[nsv[,"zeroVar"] > 0, ]
+# There are no near zero or zero variables
+
+# now we remove factors to study collinearity of variables
+names.use <- names(datamtcars)[!(names(datamtcars) %in% cols)]
+datamtcars.subset <- datamtcars[, names.use]
+# # running correlation
+ descrCor <-  cor(mtcars)
+ highlyCorDescr <- findCorrelation(descrCor, cutoff = .9)
+# No high correlation beyond 0.9 so we willnot remove any variable for now
+
+# plotting data pairs to have a first look at the variation
+#  ggpairs(datamtcars, aes(colour = am, alpha = 0.4))
+
+```
+
+# Prelimanry estimates 
+We have prepared the data set for analysis. We will start by a simple t test since the number of data is limited. We will do a plot of both groups as a visulaization of the problem. We will also do a plot of all variables to have a feel of the probelm under study. Let us see how to do that.
+
+```{r, cache=TRUE, echo=FALSE, warning=FALSE, eval=TRUE}
+plot1<-ggplot(datamtcars, aes(x=am, y=mpg, color=am)) + geom_boxplot() +geom_point()
+# the plot shows a signifcant difference in the data set between both groups and it shows that the data points do cover well the range
+
+# We run a t test to check the statistical significance in teh difference between both groups
+significance<-t.test(datamtcars$mpg ~ datamtcars$am)
+# the p value shows that there is more than 98% probability they are different, let us do some plots
+
+par(mfrow=c(3,2))
+plot2<-ggplot(datamtcars, aes(x=disp, y=mpg, color=am, shape=cyl)) +geom_point()
+plot3<-ggplot(datamtcars, aes(x=hp, y=mpg, color=am, shape=gear)) +geom_point()
+plot4<-ggplot(datamtcars, aes(x=drat, y=mpg, color=am, shape=vs)) +geom_point()
+plot5<-ggplot(datamtcars, aes(x=wt, y=mpg, color=am, shape=cyl)) +geom_point()
+plot6<-ggplot(datamtcars, aes(x=qsec, y=mpg, color=am, shape=carb)) +geom_point()
+plot2
+plot3
+plot4
+plot5
+plot6
+str(datamtcars)
+
+# the plots show several variables correlate with the mpg, however, the displacment is sufficent to be express the cylinders number so i will remove it from the analysis
+
+datamtcars.subset<-select(datamtcars,-cyl)
+```
+
+# Building models and exploring them
+In the previous section we have seen that there is a difference in the mpg for both groups that is statistically significant. The plots show several variables correlate with the mpg, however, the displacment is sufficent to be express the cylinders number so i will remove it from the analysis.
+
+Now, we will build several models and compare them. We will do a linear model, a ridge regression, lasso and elastic net. We will also do a simple physics based model based on my experience as a combustion engineer. 
+
+```{r, cache=TRUE, echo=FALSE, warning=FALSE, eval=TRUE}
+# Custom Control Parameters
+custom <- trainControl(method = "repeatedcv",
+                       number = 3,
+                       repeats = 2)
+lm <- train(mpg~., datamtcars.subset, method='lm',trControl=custom)
+
+# Results and model examination
+summary(lm$finalModel)
+plot(varImp(lm, scale=T))
+plot(lm$finalModel)
+lm$results
+
+ridge <- train(mpg~., datamtcars.subset, 
+               method='glmnet',
+               tuneGrid=expand.grid(alpha=0, lambda=seq(3,4,length=5)),
+               trControl=custom)
+summary(ridge$finalModel)
+# Plot Results and examine model
+plot(varImp(ridge, scale=T)) # variable relative importance
+plot(ridge) #Examine how lamda impacts the model and may be tweek the breaks up in the model based on this
+plot(ridge$finalModel, xvar = "lambda", label = T) 
+plot(ridge$finalModel, xvar = 'dev', label=T) # how much of the data variance is explained
+
+
+# Lasso Regression
+set.seed(1234)
+lasso <- train(mpg~., datamtcars.subset,  
+               method='glmnet',
+               tuneGrid=expand.grid(alpha=1, lambda=seq(0.4,1,length=5)),
+               trControl=custom)
+
+# Plot Results and examine 
+plot(lasso)
+plot(lasso$finalModel, xvar = 'lambda', label=T)
+plot(lasso$finalModel, xvar = 'dev', label=T) 
+# notice the number of variables that are needed to explain
+# the data variability. 
+plot(varImp(lasso, scale=T)) # checking the variables relative importance
+
+# Elastic Net Regression
+# IT is essentially a mix of ridge and lasso
+set.seed(1234)
+en <- train(mpg~., datamtcars.subset,  
+            method='glmnet',
+            tuneGrid=expand.grid(alpha=seq(0.1,1,length=10), lambda=seq(0.0001,1,length=5)),
+            trControl=custom)
+
+# Plot Results
+plot(en)
+plot(en$finalModel, xvar = 'lambda', label=T)
+plot(en$finalModel, xvar = 'dev', label=T)
+
+# Compare Models. 
+model_list <- list(LineraModel=lm,Ridge=ridge,Lassso=lasso,
+                   ElasticNet=en) #create list of models used
+res <- resamples(model_list) #using the resamples in carrot package to compare model
+summary(res) #numerical comparison between models. Check the mean value of the mean rsquared
+bwplot(res) #plotting the models for comparison
+xyplot(res,metric='RMSE')
+
+# Best Model
+en$bestTune # best values of alpha and lambda
+best <- en$finalModel #Saving best model
+coef(best, s = en$bestTune$lambda) #coefficents of the best model
+
+# Elastic net regression is the best mode. let us compare all coefficients for the parameter in the lm and best model
+coefficients(summary(lm))[[8]] # lm
+coef(best, s = en$bestTune$lambda)[8] # best lasso
+
+# both models suggest that the increase in mpg if you go from manual to automatic is 1.4-2 mpg
+
+```
+
+# Simplifying the model based on physics
+The previous analysis shows that based on several models fitted, the average saving in mpg is between 1.4 and 2 mpg as we go from manual to automatic transmission. The linear model and elastic net both suggest that mpg increase with transmission type. Let us now try a simple model based on physical sense only. In my experience, using the disp, weight, qsec, hp and transmission are enough to build a physically meaningful model.
+
+```{r, cache=TRUE, echo=FALSE, warning=FALSE, eval=TRUE}
+
+# from an engineering perspective and being a combustion engineer, i beleive that the most important variables are displacement, wt, qsec, hp, am so i will just build a model using that and see how easy it is to interpret the model and feel it.
+
+datamtcars.simple<-select(mtcars,-cyl,-drat,-gear,-carb,-vs)
+datamtcars.simple$am<-as.factor(datamtcars.simple$am)
+
+lmSimple <- train(mpg~., datamtcars.simple, method='lm',trControl=custom)
+
+# Results and model examination
+plot(lmSimple$finalModel)
+lmSimple$results
+plot(varImp(lmSimple, scale=T))
+summary(lmSimple$finalModel)
+# The model has a adjusted Rsquared higher than all other model we build in this project. IT actually suggests that the most important variables to inculde are wt, qsec and am so we will repeat the model with that
+
+lmSimple <- train(mpg~ wt+qsec+am, datamtcars.simple, method='lm',trControl=custom)
+
+# Results and model examination
+plot(lmSimple$finalModel)
+lmSimple$results
+plot(varImp(lmSimple, scale=T))
+summary(lmSimple$finalModel)
+# The simple models suggests an increase of 2.9 mpg as we switch to automatic transmission
+# the diagnostic plots are all reasonable. However, the increase in standardized residuals with the fitted values shows that the model is strongly dependent on data points given. 
+
+```
+# Conlsusion
+Buying a car with automatic transmission will be more cost saving for the user with about 1.4 to 2 mpg. 
+

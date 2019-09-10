@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1568100235665.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "B028FA97",
+    "lastKnownWriteTime" : 1568103585,
+    "last_content_update" : 1568103585897,
+    "path" : "~/ProjectRegressionClass/ProjectCourseRegression.Rmd",
+    "project_path" : "ProjectCourseRegression.Rmd",
+    "properties" : {
+        "cursorPosition" : "213,28",
+        "last_setup_crc32" : "",
+        "scrollLine" : "196"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

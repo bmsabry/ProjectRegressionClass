@@ -1,0 +1,12 @@
+base
+lattice
+ggplot2
+caret
+Matrix
+foreach
+glmnet
+mlbench
+psych
+GGally
+dplyr
+latexpdf
