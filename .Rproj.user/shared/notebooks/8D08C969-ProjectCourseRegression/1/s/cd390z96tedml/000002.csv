@@ -1,11 +1,62 @@
 "0","# Libraries Needed"
 "0","library(caret)"
+"2","Loading required package: lattice
+"
+"2","Loading required package: ggplot2
+"
+"2","Registered S3 method overwritten by 'dplyr':
+  method           from
+  print.rowwise_df     
+"
+"2","Registered S3 method overwritten by 'data.table':
+  method           from
+  print.data.table     
+"
 "0","library(glmnet)"
+"2","Loading required package: Matrix
+"
+"2","Loading required package: foreach
+"
+"2","Loaded glmnet 2.0-18
+
+"
 "0","library(mlbench)"
 "0","library(psych)"
+"2","
+Attaching package: ‘psych’
+
+"
+"2","The following objects are masked from ‘package:ggplot2’:
+
+    %+%, alpha
+
+"
 "0","library(mlbench)"
 "0","library(GGally)"
+"2","Registered S3 method overwritten by 'GGally':
+  method from   
+  +.gg   ggplot2
+"
 "0","library(dplyr)"
+"2","
+Attaching package: ‘dplyr’
+
+"
+"2","The following object is masked from ‘package:GGally’:
+
+    nasa
+
+"
+"2","The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+"
+"2","The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+"
 "0","# Data"
 "0","data(""mtcars"")"
 "0","datamtcars <- mtcars"
